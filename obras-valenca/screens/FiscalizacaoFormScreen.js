@@ -48,7 +48,7 @@ export default function FiscalizacaoFormScreen({ navigation, route }) {
         obra: obraId
       };
       try {
-        await fetch('https://recupera-o-mobile.onrender.com/fiscalizacoes', {
+        await fetch('https://recupera-o-mobile.onrender.com/api/fiscalizacoes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -83,7 +83,7 @@ export default function FiscalizacaoFormScreen({ navigation, route }) {
       });
     }
     try {
-      await fetch('https://recupera-o-mobile.onrender.com/fiscalizacoes', {
+      await fetch('https://recupera-o-mobile.onrender.com/api/fiscalizacoes', {
         method: 'POST',
         body: formData,
       });

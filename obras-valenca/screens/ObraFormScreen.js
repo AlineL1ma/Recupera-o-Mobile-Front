@@ -60,7 +60,7 @@ export default function ObraFormScreen({ navigation, route }) {
       });
     }
     try {
-      await fetch('https://recupera-o-mobile.onrender.com/obras', {
+      await fetch('https://recupera-o-mobile.onrender.com/api/obras', {
         method: 'POST',
         body: formData,
 

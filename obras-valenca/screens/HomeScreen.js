@@ -7,7 +7,7 @@ export default function HomeScreen({ navigation }) {
 
   const fetchObras = async () => {
     try {
-      const res = await fetch('https://recupera-o-mobile.onrender.com/obras');
+      const res = await fetch('https://recupera-o-mobile.onrender.com/api/obras');
       const data = await res.json();
       setObras(Array.isArray(data) ? data : []);
     } catch (error) {

@@ -39,7 +39,7 @@ export default function ObraDetailScreen({ route, navigation }) {
   };
 
   const excluirObra = async () => {
-    await fetch(`https://recupera-o-mobile.onrender.com/obras/${obraId}`, { method: 'DELETE' });
+    await fetch(`https://recupera-o-mobile.onrender.com/api/obras/${obraId}`, { method: 'DELETE' });
     navigation.goBack();
   };
 
