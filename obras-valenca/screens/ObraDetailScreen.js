@@ -19,9 +19,23 @@ export default function ObraDetailScreen({ route, navigation }) {
   };
 
   const fetchFiscalizacoes = async () => {
-    const res = await fetch(`https://recupera-o-mobile.onrender.com/obras/${obraId}/fiscalizacoes`);
-    const data = await res.json();
-    setFiscalizacoes(data);
+    try {
+      const res = await fetch(`https://recupera-o-mobile.onrender.com/fiscalizacoes/obra/${obraId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFiscalizacoes(Array.isArray(data) ? data : []);
+      } else {
+        const res2 = await fetch(`https://recupera-o-mobile.onrender.com/obras/${obraId}/detalhes`);
+        if (res2.ok) {
+          const data2 = await res2.json();
+          setFiscalizacoes(Array.isArray(data2.fiscalizacoes) ? data2.fiscalizacoes : []);
+        } else {
+          setFiscalizacoes([]);
+        }
+      }
+    } catch (e) {
+      setFiscalizacoes([]);
+    }
   };
 
   const excluirObra = async () => {
@@ -52,14 +66,15 @@ export default function ObraDetailScreen({ route, navigation }) {
       <Text style={{ marginTop: 16, fontWeight: 'bold' }}>Fiscalizações:</Text>
       <FlatList
         data={fiscalizacoes}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={item => item._id}
         renderItem={({ item }) => (
           <View style={{ padding: 8, borderBottomWidth: 1 }}>
             <Text>Data: {item.data}</Text>
-            <Text>Status: {item.status}</Text>
+            <Text>Status: {item.statusObra}</Text>
             <Text>Obs: {item.observacoes}</Text>
           </View>
         )}
+        ListEmptyComponent={<Text>Nenhuma fiscalização cadastrada.</Text>}
       />
       <Button title="Editar" onPress={() => navigation.navigate('ObraForm', { obra })} />
       <Button title="Excluir" onPress={excluirObra} color="red" />

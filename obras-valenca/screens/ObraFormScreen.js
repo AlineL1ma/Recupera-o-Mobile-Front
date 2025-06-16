@@ -23,24 +23,52 @@ export default function ObraFormScreen({ navigation, route }) {
   };
 
   const tirarFoto = async () => {
-    let result = await ImagePicker.launchCameraAsync({ base64: true });
+    let result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images });
     if (!result.cancelled) {
-      setFoto(result.uri);
+      setFoto(result);
     }
   };
 
+  function formatarDataBRparaISO(dataBR) {
+    if (!dataBR) return null;
+    const [dia, mes, ano] = dataBR.split('/');
+    return `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+  }
+
   const salvarObra = async () => {
-    await fetch('https://recupera-o-mobile.onrender.com/obras', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nome, responsavel, dataInicio, previsaoTermino, descricao,
-        latitude: localizacao?.latitude,
-        longitude: localizacao?.longitude,
-        foto
-      })
-    });
-    navigation.goBack();
+    const formData = new FormData();
+    formData.append('nome', nome);
+    formData.append('responsavel', responsavel);
+    formData.append('dataInicio', formatarDataBRparaISO(dataInicio));
+    formData.append('previsaoTermino', formatarDataBRparaISO(previsaoTermino));
+    formData.append('descricao', descricao);
+    if (localizacao) {
+      formData.append('localizacao', JSON.stringify({
+        latitude: localizacao.latitude,
+        longitude: localizacao.longitude
+      }));
+    }
+    if (foto && foto.uri) {
+      const fileName = foto.uri.split('/').pop();
+      const match = /\.(\w+)$/.exec(fileName ?? '');
+      const ext = match ? match[1] : 'jpg';
+      const type = `image/${ext}`;
+      formData.append('foto', {
+        uri: foto.uri,
+        name: fileName,
+        type: type,
+      });
+    }
+    try {
+      await fetch('https://recupera-o-mobile.onrender.com/obras', {
+        method: 'POST',
+        body: formData,
+
+      });
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Erro ao salvar obra', error.message);
+    }
   };
 
   return (
@@ -53,7 +81,7 @@ export default function ObraFormScreen({ navigation, route }) {
       <Button title="Obter Localização" onPress={obterLocalizacao} />
       {localizacao && <Text>Lat: {localizacao.latitude}, Lon: {localizacao.longitude}</Text>}
       <Button title="Tirar Foto" onPress={tirarFoto} />
-      {foto && <Image source={{ uri: foto }} style={{ width: 100, height: 100 }} />}
+      {foto && foto.uri && <Image source={{ uri: foto.uri }} style={{ width: 100, height: 100 }} />}
       <Button title="Salvar" onPress={salvarObra} />
     </View>
   );
