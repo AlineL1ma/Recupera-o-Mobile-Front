@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, TextInput, Button, Image, Text, Alert } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function FiscalizacaoFormScreen({ navigation, route }) {
   const { obraId } = route.params;
@@ -35,9 +36,8 @@ export default function FiscalizacaoFormScreen({ navigation, route }) {
   }
 
   const salvarFiscalizacao = async () => {
-    // Se não houver foto, envia como JSON
-    if (!foto) {
-      const payload = {
+    try {
+      const novaFiscalizacao = {
         data: formatarDataBRparaISO(data),
         statusObra,
         observacoes,
@@ -45,48 +45,14 @@ export default function FiscalizacaoFormScreen({ navigation, route }) {
           latitude: localizacao.latitude,
           longitude: localizacao.longitude
         } : undefined,
-        obra: obraId
+        obra: obraId,
+        foto: foto && foto.uri ? foto.uri : null
       };
-      try {
-        await fetch('https://recupera-o-mobile.onrender.com/api/fiscalizacoes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        navigation.goBack();
-      } catch (error) {
-        Alert.alert('Erro ao salvar fiscalização', error.message);
-      }
-      return;
-    }
-    // Se houver foto, envia como multipart/form-data
-    const formData = new FormData();
-    formData.append('data', formatarDataBRparaISO(data));
-    formData.append('statusObra', statusObra);
-    formData.append('observacoes', observacoes);
-    if (localizacao) {
-      formData.append('localizacao', JSON.stringify({
-        latitude: localizacao.latitude,
-        longitude: localizacao.longitude
-      }));
-    }
-    formData.append('obra', obraId);
-    if (foto && foto.uri) {
-      const fileName = foto.uri.split('/').pop();
-      const match = /\.(\w+)$/.exec(fileName ?? '');
-      const ext = match ? match[1] : 'jpg';
-      const type = `image/${ext}`;
-      formData.append('foto', {
-        uri: foto.uri,
-        name: fileName,
-        type: type,
-      });
-    }
-    try {
-      await fetch('https://recupera-o-mobile.onrender.com/api/fiscalizacoes', {
-        method: 'POST',
-        body: formData,
-      });
+      // Recupera fiscalizações já salvas
+      const salvas = await AsyncStorage.getItem('fiscalizacoes');
+      let lista = salvas ? JSON.parse(salvas) : [];
+      lista.push(novaFiscalizacao);
+      await AsyncStorage.setItem('fiscalizacoes', JSON.stringify(lista));
       navigation.goBack();
     } catch (error) {
       Alert.alert('Erro ao salvar fiscalização', error.message);

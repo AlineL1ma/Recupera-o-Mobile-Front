@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, Button, TouchableOpacity, RefreshControl } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen({ navigation }) {
   const [obras, setObras] = useState([]);
@@ -7,9 +8,9 @@ export default function HomeScreen({ navigation }) {
 
   const fetchObras = async () => {
     try {
-      const res = await fetch('https://recupera-o-mobile.onrender.com/api/obras');
-      const data = await res.json();
-      setObras(Array.isArray(data) ? data : []);
+      const salvas = await AsyncStorage.getItem('obras');
+      const lista = salvas ? JSON.parse(salvas) : [];
+      setObras(lista);
     } catch (error) {
       setObras([]);
     }

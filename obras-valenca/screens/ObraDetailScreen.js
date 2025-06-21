@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, Alert } from 'react-native';
 import * as MailComposer from 'expo-mail-composer';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ObraDetailScreen({ route, navigation }) {
   const { obraId } = route.params;
@@ -13,34 +14,42 @@ export default function ObraDetailScreen({ route, navigation }) {
   }, []);
 
   const fetchObra = async () => {
-    const res = await fetch(`https://recupera-o-mobile.onrender.com/obras/${obraId}`);
-    const data = await res.json();
-    setObra(data);
+    try {
+      const salvas = await AsyncStorage.getItem('obras');
+      const lista = salvas ? JSON.parse(salvas) : [];
+      const encontrada = lista.find(o => o.id === obraId || o._id === obraId);
+      setObra(encontrada);
+    } catch (e) {
+      setObra(null);
+    }
   };
 
   const fetchFiscalizacoes = async () => {
     try {
-      const res = await fetch(`https://recupera-o-mobile.onrender.com/fiscalizacoes/obra/${obraId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setFiscalizacoes(Array.isArray(data) ? data : []);
-      } else {
-        const res2 = await fetch(`https://recupera-o-mobile.onrender.com/obras/${obraId}/detalhes`);
-        if (res2.ok) {
-          const data2 = await res2.json();
-          setFiscalizacoes(Array.isArray(data2.fiscalizacoes) ? data2.fiscalizacoes : []);
-        } else {
-          setFiscalizacoes([]);
-        }
-      }
+      const salvas = await AsyncStorage.getItem('fiscalizacoes');
+      const lista = salvas ? JSON.parse(salvas) : [];
+      const filtradas = lista.filter(f => f.obra === obraId || f.obraId === obraId);
+      setFiscalizacoes(filtradas);
     } catch (e) {
       setFiscalizacoes([]);
     }
   };
 
   const excluirObra = async () => {
-    await fetch(`https://recupera-o-mobile.onrender.com/api/obras/${obraId}`, { method: 'DELETE' });
-    navigation.goBack();
+    try {
+      const salvas = await AsyncStorage.getItem('obras');
+      let lista = salvas ? JSON.parse(salvas) : [];
+      lista = lista.filter(o => (o.id || o._id) !== obraId);
+      await AsyncStorage.setItem('obras', JSON.stringify(lista));
+      // Remove fiscalizações relacionadas
+      const fiscalSalvas = await AsyncStorage.getItem('fiscalizacoes');
+      let listaFiscal = fiscalSalvas ? JSON.parse(fiscalSalvas) : [];
+      listaFiscal = listaFiscal.filter(f => (f.obra !== obraId && f.obraId !== obraId));
+      await AsyncStorage.setItem('fiscalizacoes', JSON.stringify(listaFiscal));
+      navigation.goBack();
+    } catch (e) {
+      Alert.alert('Erro ao excluir obra', e.message);
+    }
   };
 
   const enviarEmail = async () => {
@@ -66,7 +75,7 @@ export default function ObraDetailScreen({ route, navigation }) {
       <Text style={{ marginTop: 16, fontWeight: 'bold' }}>Fiscalizações:</Text>
       <FlatList
         data={fiscalizacoes}
-        keyExtractor={item => item._id}
+        keyExtractor={item => item.id || item._id}
         renderItem={({ item }) => (
           <View style={{ padding: 8, borderBottomWidth: 1 }}>
             <Text>Data: {item.data}</Text>

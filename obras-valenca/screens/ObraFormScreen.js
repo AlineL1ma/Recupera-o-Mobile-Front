@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import { View, TextInput, Button, Image, Text, Alert } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ObraFormScreen({ navigation, route }) {
-  const [nome, setNome] = useState('');
-  const [responsavel, setResponsavel] = useState('');
-  const [dataInicio, setDataInicio] = useState('');
-  const [previsaoTermino, setPrevisaoTermino] = useState('');
-  const [descricao, setDescricao] = useState('');
-  const [localizacao, setLocalizacao] = useState(null);
-  const [foto, setFoto] = useState(null);
+  const obraEdit = route?.params?.obra;
+  const [nome, setNome] = useState(obraEdit ? obraEdit.nome : '');
+  const [responsavel, setResponsavel] = useState(obraEdit ? obraEdit.responsavel : '');
+  const [dataInicio, setDataInicio] = useState(obraEdit ? obraEdit.dataInicio : '');
+  const [previsaoTermino, setPrevisaoTermino] = useState(obraEdit ? obraEdit.previsaoTermino : '');
+  const [descricao, setDescricao] = useState(obraEdit ? obraEdit.descricao : '');
+  const [localizacao, setLocalizacao] = useState(obraEdit ? obraEdit.localizacao : null);
+  const [foto, setFoto] = useState(obraEdit ? { uri: obraEdit.foto } : null);
 
   const obterLocalizacao = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
@@ -36,35 +38,28 @@ export default function ObraFormScreen({ navigation, route }) {
   }
 
   const salvarObra = async () => {
-    const formData = new FormData();
-    formData.append('nome', nome);
-    formData.append('responsavel', responsavel);
-    formData.append('dataInicio', formatarDataBRparaISO(dataInicio));
-    formData.append('previsaoTermino', formatarDataBRparaISO(previsaoTermino));
-    formData.append('descricao', descricao);
-    if (localizacao) {
-      formData.append('localizacao', JSON.stringify({
-        latitude: localizacao.latitude,
-        longitude: localizacao.longitude
-      }));
-    }
-    if (foto && foto.uri) {
-      const fileName = foto.uri.split('/').pop();
-      const match = /\.(\w+)$/.exec(fileName ?? '');
-      const ext = match ? match[1] : 'jpg';
-      const type = `image/${ext}`;
-      formData.append('foto', {
-        uri: foto.uri,
-        name: fileName,
-        type: type,
-      });
-    }
     try {
-      await fetch('https://recupera-o-mobile.onrender.com/api/obras', {
-        method: 'POST',
-        body: formData,
-
-      });
+      const novaObra = {
+        id: obraEdit ? obraEdit.id : Date.now().toString(),
+        nome,
+        responsavel,
+        dataInicio: formatarDataBRparaISO(dataInicio),
+        previsaoTermino: formatarDataBRparaISO(previsaoTermino),
+        descricao,
+        localizacao: localizacao ? {
+          latitude: localizacao.latitude,
+          longitude: localizacao.longitude
+        } : undefined,
+        foto: foto && foto.uri ? foto.uri : null
+      };
+      const salvas = await AsyncStorage.getItem('obras');
+      let lista = salvas ? JSON.parse(salvas) : [];
+      if (obraEdit) {
+        lista = lista.map(o => (o.id === obraEdit.id ? novaObra : o));
+      } else {
+        lista.push(novaObra);
+      }
+      await AsyncStorage.setItem('obras', JSON.stringify(lista));
       navigation.goBack();
     } catch (error) {
       Alert.alert('Erro ao salvar obra', error.message);
